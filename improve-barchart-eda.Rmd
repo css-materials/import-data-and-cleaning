@@ -1,0 +1,116 @@
+---
+title: "Improve the bar chart from Lecture 4 (EDA) using `scorecard` data"
+output: html_document
+author: Sabrina Nardin
+---
+
+Load libraries and data
+```{r}
+library(tidyverse)
+library(rcis)
+data(scorecard)
+```
+
+Check
+```{r}
+glimpse(scorecard)
+```
+
+You might remember this plot from the Exploratory Data Analysis lecture (lecture 4): https://computing-soc-sci.netlify.app/slides/exploratory-data-analysis/#52 
+
+This is the code to reproduce the same plot shown in the slides:
+```{r barplot_cat}
+ggplot(
+  data = scorecard,
+  mapping = aes(
+    x = type,
+    fill = state,
+  )
+) +
+  geom_bar(position = "stack")
+```
+
+This (stacked) bar chart represents the total number of schools in the U.S. by school type (n = 3) and by state (n = 54). We have two categorical variables: `type` and `state`.
+
+Each bar represents one category of a categorical variable, and is divided into segments representing the categories of the other categorical variable. *But... is this a good graph? Why yes/no? How can we improve it?*
+
+Does reversing the x and y produce a better bar chart?
+```{r barplot_cat_2}
+ggplot(
+  data = scorecard,
+  mapping = aes(
+    x = state,
+    fill = type)
+) +
+  geom_bar(position = "stack") +
+  labs(
+    title = "Number of Schools by State and Type",
+    x = "State",
+    y = "Count",
+    fill = "School Type"
+  ) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 0.5))
+```
+
+This is a bit better, but we are not quite there yet. We need to use `dplyr` to manipulate the variables before visualizing them with `ggplot2`!
+
+For example, we can aggregate the 54 states using some criteria and then display them.
+
+```{r}
+# count of observations by state
+scorecard %>%
+  count(state)
+```
+
+```{r}
+# define categories using mutate() and case_when()
+scorecard <- 
+  scorecard %>%
+  mutate(region = case_when(
+    state %in% c("CT", "ME", "MA", "NH", "RI", "VT", "NJ", "NY", "PA") ~ "Northeast",
+    state %in% c("IL", "IN", "IA", "KS", "MI", "MN", "MO", "NE", "ND", "OH", "SD", "WI") ~ "Midwest",
+    state %in% c("AL", "AR", "DE", "FL", "GA", "KY", "LA", "MD", "MS", "NC", "OK", "SC", "TN", "TX", "VA", "WV") ~ "South",
+    state %in% c("AK", "AZ", "CA", "CO", "HI", "ID", "MT", "NV", "NM", "OR", "UT", "WA", "WY") ~ "West"
+  ))
+```
+
+```{r}
+# check
+scorecard %>% count(region, state)
+```
+
+Now we aggregate the total number of schools by region (vs. by state, like in the original data):
+```{r}
+# count(), group_by(), summarize()
+by_region <- 
+  scorecard %>% 
+  count(region, state, type) %>%
+  group_by(region, type) %>% 
+  summarize(total_by_region = sum(n))
+
+by_region
+```
+
+And we use this new data which we saved in the `by_region` dataframe to make our new bar chart:
+```{r}
+# Use the by_region data to create a new bar plot
+ggplot(by_region, 
+       mapping = aes(x = region, 
+                     y = total_by_region, 
+                     fill = type)) +
+  geom_bar(stat = "identity", 
+           position = "stack") +
+  labs(
+    title = "Number of Schools by Region and Type",
+    x = "Region",
+    y = "Count",
+    fill = "School Type"
+  )
+
+# we need both x and y here because we are using pre-summarized data given by total_by_region 
+# here y represents values directly (counts, sums, etc.) so we use stat = "identity" 
+```
+
+Takeaway: this code demonstrates using both `dplyr` and `ggplot` to manipulate and visualize data. For further practice, consider improving this plot with additional code or exploring different data manipulation techniques before plotting (e.g., we mentioned using a "mosaic" plot or a "dot" plot -- for the first you need to install the library `ggmosaic`).
+
+

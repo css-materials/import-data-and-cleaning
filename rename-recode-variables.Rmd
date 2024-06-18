@@ -1,0 +1,165 @@
+---
+title: "Rename and recode variables"
+output: html_document
+author: Sabrina Nardin
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Code chunk
+
+* PC: Cntr + Alt + I
+* Mac: Cmd + Option + I
+
+Pipe
+
+* PC: Ctrl + Shift + M 
+* Mac: Cmd + Shift + M
+
+```{r}
+library(tidyverse)
+library(palmerpenguins)
+```
+
+
+```{r}
+data("penguins")
+```
+
+
+## Explore the data
+
+```{r}
+glimpse(penguins)
+```
+
+```{r}
+summary(penguins)
+```
+
+
+## Renaming and recoding variables
+
+
+### Renaming variables
+
+To change variable names the most common method is `rename()` with `new_name = old_name` syntax
+
+```{r}
+# check before renaming
+penguins %>% select(species)
+
+# rename
+penguins %>% 
+  rename(specie = species)  
+```
+
+```{r}
+# remember to save results in a new dataframe if you want to save it
+p <- penguins %>% 
+  rename(specie = species) 
+
+# check
+p %>% select(specie)
+```
+
+
+### Recoding variables
+
+There are a few ways to change the name of levels of categorical variables, we review two of them.
+
+Option 1: use `mutate()` + `recode()` with `old_name = new_name` syntax. See: https://dplyr.tidyverse.org/reference/recode.html
+```{r}
+# check before recoding
+count(penguins, sex)
+
+# equivalent code
+#penguins %>% count(sex)
+```
+
+```{r}
+# mutate + recode
+penguins %>%
+  mutate(sex = recode(
+    sex,
+    male = 1,   # old = new
+    female = 0)) %>%  
+  count(sex)
+```
+
+
+Option 2: another popular method to change the name of levels of categorical variables is `mutate()` + `case_when()` with `old_name = new_name` syntax. See: https://dplyr.tidyverse.org/reference/case_when.html
+```{r}
+# mutate + case_when
+penguins %>%
+  mutate(sex = case_when(
+    sex == "female" ~ 0,  # old ~ new
+    sex == "male" ~ 1
+  )) %>%
+  count(sex)
+
+# note the use of "" around female and male (vs. above code using recode
+```
+
+Notice we always use `mutate()` when we need to manipulate variables! `mutate()` creates new columns from existing ones or modify existing columns. For example, we used it here together with functions for renaming or recording variables. And we also used it when we needed to change a character variable into a factor (see examples in lecture 5 slides).
+
+
+## Syntactic and non-syntactic variable names
+
+
+### Syntactic names
+
+A syntactic name is what R considers a valid name: letters, digits, `.` and `_` but it can’t begin with symbols or a with a digit.
+
+```{r}
+count(penguins, bill_length_mm)
+```
+
+Here `bill_length_mm` is a column of the `penguins` data frame. It has a syntactic name, so we can refer to it directly. 
+
+Examples of syntactic or valid variable names:
+```
+bill_length_mm
+bill.length.mm
+bill.length_mm    # bad coding style but "valid" name
+ideology
+ideology_7_point
+id
+```
+
+### Non-syntactic names
+
+A non-syntactic name is a name that R does not consider a valid name. This includes names that contain spaces, start with a digit or a symbol, or use reserved words such as TRUE, NULL, if, or function names. See the complete list of reserved names by typing `?Reserved` in your Console.
+
+Example of non-syntactic or invalid variable names:
+```
+bill length mm
+bill_ length_mm
+social conservative
+social_ conservative
+social-conservative
+7-point ideology
+_id
+if
+```
+
+### Why should we care? Simply be aware that you might encounter them, and if you do, remember to use backticks!"
+
+You do not want to deliberately create non-syntactic names, BUT you need to understand how they work because you’ll come across them when working with social sciences data, especially if the data that has been created outside R. This happens more frequently that you would expect!
+
+To refer to non-syntactic names: (1) use backticks, not quotes; or/and (2) recode them.
+
+Example: imagine you have loaded into R data on ideology by country, assembled by someone else in Excel. As you start exporing the data, you find a variable labeled as follows:
+
+```
+7-point ideology <- c("communism", "anarchism", "fascism")
+```
+
+To use it without changing it, you must use backticks, otherwise R will throw an error:
+```{r}
+`7-point ideology` <- c("communism", "anarchism", "fascism")
+```
+
+
